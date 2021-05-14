@@ -1,15 +1,20 @@
-use std::io;
+#[cfg(feature = "std")]
+use std::{io, cmp, fmt};
+#[cfg(not(feature = "std"))]
+use core::{cmp, fmt};
 
 #[derive(Debug)]
 pub enum DisassemblyError {
+    #[cfg(feature = "std")]
     IOError(io::Error),
     InvalidHexCharacter,
     TooFewBytesForPush,
 }
 
-impl std::cmp::PartialEq for DisassemblyError {
+impl cmp::PartialEq for DisassemblyError {
     fn eq(&self, other: &Self) -> bool {
         match other {
+            #[cfg(feature = "std")]
             DisassemblyError::IOError(rhs) => {
                 if let DisassemblyError::IOError(lhs) = self {
                     rhs.kind() == lhs.kind()
@@ -35,21 +40,24 @@ impl std::cmp::PartialEq for DisassemblyError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::convert::From<io::Error> for DisassemblyError {
     fn from(err: io::Error) -> Self {
         DisassemblyError::IOError(err)
     }
 }
 
+#[cfg(feature = "std")]
 impl std::convert::From<hex::FromHexError> for DisassemblyError {
     fn from(_: hex::FromHexError) -> Self {
         DisassemblyError::InvalidHexCharacter
     }
 }
 
-impl std::fmt::Display for DisassemblyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for DisassemblyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(feature = "std")]
             Self::IOError(err) => write!(f, "Encountered IO error: {}!", err),
             Self::InvalidHexCharacter => write!(f, "Encountered invalid hex character!"),
             Self::TooFewBytesForPush => {
@@ -59,4 +67,5 @@ impl std::fmt::Display for DisassemblyError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for DisassemblyError {}

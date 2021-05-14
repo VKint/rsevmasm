@@ -13,7 +13,9 @@
 // limitations under the License.
 
 use crate::DisassemblyError;
-use std::io::{self, Cursor, Read};
+use crate::Curs;
+#[cfg(not(feature = "std"))]
+use alloc::{vec::Vec, vec};
 
 pub fn assemble(disassembly: Vec<Instruction>) -> Vec<u8> {
     let mut result = Vec::new();
@@ -108,9 +110,9 @@ pub fn assemble_instruction(instruction: Instruction) -> Vec<u8> {
 }
 
 pub fn disassemble_next_byte(
-    cursor: &mut Cursor<&[u8]>,
+    cursor: &mut Curs,
 ) -> Result<(usize, Instruction), DisassemblyError> {
-    let offset = cursor.position() as usize;
+    let offset = cursor.1;
     let opcode = read_n_bytes(cursor, 1)?[0];
     let instruction = match opcode {
         0x00 => Instruction::Stop,
@@ -237,10 +239,10 @@ pub fn disassemble_next_byte(
     Ok((offset, instruction))
 }
 
-fn read_n_bytes(cursor: &mut Cursor<&[u8]>, n: usize) -> Result<Vec<u8>, io::Error> {
-    let mut buffer = vec![0; n];
-    cursor.read_exact(&mut buffer)?;
-    Ok(buffer)
+fn read_n_bytes(cursor: &mut Curs, n: usize) -> Result<Vec<u8>, DisassemblyError> {
+    let buffer = cursor.0.get(cursor.1..n).ok_or(DisassemblyError::TooFewBytesForPush);
+    cursor.1 += n;
+    buffer.map(|v| v.to_vec())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -11,17 +11,28 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+use alloc::{vec::Vec, collections::BTreeMap};
+
 pub mod error;
 pub mod instructions;
 
+#[cfg(feature = "std")]
 use hex;
+#[cfg(feature = "std")]
 use std::collections::BTreeMap;
-use std::io::Cursor;
 
 use instructions::{assemble_instruction, disassemble_next_byte};
 
 pub use error::DisassemblyError;
 pub use instructions::Instruction;
+
+pub(crate) type Curs<'a> = (&'a [u8], usize);
 
 #[derive(Clone, Debug)]
 pub struct Disassembly {
@@ -34,6 +45,7 @@ impl Disassembly {
         Ok(Self { instructions })
     }
 
+    #[cfg(feature = "std")]
     pub fn from_hex_str(input: &str) -> Result<Self, DisassemblyError> {
         let instructions = disassemble_hex_str(input)?;
         Ok(Self { instructions })
@@ -52,6 +64,7 @@ pub fn assemble_instructions(disassembly: Vec<Instruction>) -> Vec<u8> {
     result
 }
 
+#[cfg(feature = "std")]
 fn disassemble_hex_str(input: &str) -> Result<BTreeMap<usize, Instruction>, DisassemblyError> {
     let input = if input[0..2] == *"0x" {
         &input[2..]
@@ -64,10 +77,12 @@ fn disassemble_hex_str(input: &str) -> Result<BTreeMap<usize, Instruction>, Disa
 
 fn disassemble_bytes(bytes: &[u8]) -> Result<BTreeMap<usize, Instruction>, DisassemblyError> {
     let mut instructions = BTreeMap::new();
-    let mut cursor = Cursor::new(bytes);
+    let pos = 0;
+    let mut cursor: Curs = (bytes, pos);
     loop {
         let result = disassemble_next_byte(&mut cursor);
         match result {
+            #[cfg(feature = "std")]
             Err(DisassemblyError::IOError(..)) => break,
             Ok((offset, instruction)) => {
                 instructions.insert(offset, instruction);
